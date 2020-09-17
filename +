@@ -1,0 +1,30 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+
+class CovidData():
+    def __init__(self, infile="covid-deaths.csv"):
+        self.df = pd.read_csv(infile)
+        self.dates = pd.date_range('01/22/2020', '08/07/2020', freq='D').date
+        self.selected = None
+
+    def select_country(self, name="US"):
+        s = self.df[self.df["Country/Region"] == name].iloc[:, 4:]
+        s = s.transpose()
+        col_names = s.columns.tolist()
+        if (len(col_names) > 1):
+            print("changing just the first column's name to {}".format(name))
+        s = s.rename(columns={col_names[0]: name})
+        self.selected = s
+        print(self.selected)
+        
+
+    def plot_selection(self):
+        if self.selected is None:
+            raise ValueException("no country selected")
+        self.selected.plot(kind="bar").set_xticklabels(self.dates)
+        plt.show()
+
+if __name__ == "__main__":
+    covid_data = CovidData()
+    covid_data.select_country()
+    covid_data.plot_selection()
