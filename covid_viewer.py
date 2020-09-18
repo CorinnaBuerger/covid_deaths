@@ -1,15 +1,35 @@
 from sys import argv, exit
 import matplotlib.pyplot as plt
 import pandas as pd
+import requests
+
+usage_msg = (
+"""Usage: covid_viewer <country> <total/daily> [--update] [--help]
+    --update\t\tupdate the local COVID data copy from JHU
+    --help\t\tdisplay this help message
+
+Copyright (c) 2020 by Corinna Buerger""")
+
+JHU_RESPONSE_MIN_LENGTH = 100000
+JHU_UPDATED_DATA_FILENAME = "covid_deaths.csv"  # NOTE: potentially overrides old data
 
 class CovidData():
     def __init__(self, infile="covid-deaths.csv"):
-        self.df_total = pd.read_csv(infile)                                     # DataFrame for total death cases
-        self.dates = pd.date_range('01/22/2020', '09/16/2020', freq='D').date
-        self.selected = None                                                    # no country selected yet
-        self.daily_deaths = {}                                                  # will be filled and transformed into self.df_daily
-        self.df_daily = self.get_daily_deaths()                                 # DataFrame for the daily death cases
-        self.get_world_deaths()                                                 # adds worldwide death cases to both DataFrames
+        # pd.DataFrame for total death cases
+        self.df_total = pd.read_csv(infile)
+        self.dates = pd.date_range("01/22/2020", "09/16/2020", freq="D").date
+
+        # no country selected yet
+        self.selected = None                                                  
+
+        # will be filled and transformed into self.df_daily
+        self.daily_deaths = {}                                                
+     
+        # DataFrame for daily death cases
+        self.df_daily = self.get_daily_deaths()
+
+        # adds worldwide death cases to both DataFrames
+        self.get_world_deaths()                                               
 
     def get_world_deaths(self):
         # append to DataFrame for total deaths
@@ -93,17 +113,29 @@ class CovidData():
 
 
     def update_local_data():
-        print("make an URL request using the `request' module")
+        base_url = "https://raw.githubusercontent.com/"
+        url = (base_url + 
+               "CSSEGISandData/COVID-19/" + 
+               "master/csse_covid_19_data/" +
+               "csse_covid_19_time_series/" +
+               "time_series_covid19_deaths_global.csv")
 
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            content = response.content
+            if len(content) < JHU_RESPONSE_MIN_LENGTH:
+                print("got a very short response, aborting")
+                exit(1)
+            csv_file = open(JHU_UPDATED_DATA_FILENAME, "wb")
+            csv_file.write(content)
+            csv_file.close()
+            print("successfully updated {}".
+                  format(JHU_UPDATED_DATA_FILENAME))
 
     def usage():
-        print(
-"""Usage: covid_viewer <country> <total/daily> [--update] [--help]
-    --update\t\tupdate the local COVID data copy from JHU
-    --help\t\tdisplay this help message
+        print(usage_msg)
 
-Copyright (c) 2020 by Corinna Buerger"""
-        )
 
 if __name__ == "__main__":
     if len(argv) < 3:
@@ -114,7 +146,7 @@ if __name__ == "__main__":
         if param == "--update":
             CovidData.update_local_data()
         if param == "--help":
-            CovidData.usage()  # TODO
+            CovidData.usage()
 
     # TODO: validate, that country and df_type exist in df, 
     #       otherwise use a sensible default
