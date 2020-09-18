@@ -11,7 +11,8 @@ usage_msg = (
 Copyright (c) 2020 by Corinna Buerger""")
 
 JHU_RESPONSE_MIN_LENGTH = 100000
-JHU_UPDATED_DATA_FILENAME = "covid_deaths.csv"  # NOTE: potentially overrides old data
+JHU_UPDATED_DATA_FILENAME = "covid_deaths.csv"  # NOTE: potentially overrides
+
 
 class CovidData():
     def __init__(self, infile="covid-deaths.csv"):
@@ -20,16 +21,16 @@ class CovidData():
         self.dates = pd.date_range("01/22/2020", "09/16/2020", freq="D").date
 
         # no country selected yet
-        self.selected = None                                                  
+        self.selected = None 
 
         # will be filled and transformed into self.df_daily
-        self.daily_deaths = {}                                                
-     
+        self.daily_deaths = {}
+
         # DataFrame for daily death cases
         self.df_daily = self.get_daily_deaths()
 
         # adds worldwide death cases to both DataFrames
-        self.get_world_deaths()                                               
+        self.get_world_deaths() 
 
     def get_world_deaths(self):
         # append to DataFrame for total deaths
@@ -45,15 +46,18 @@ class CovidData():
             else:
                 for row_idx in range(0, len(self.df_total)):
                     if row_idx == 0: 
-                        # for the first row (country) in each column (day) the death cases will be assigned 
+                        # for the first row (country) in each column (day)
+                        # the death cases will be assigned 
                         world_total[column] = self.df_total.iloc[row_idx, col_idx]
                     else: 
-                        # for all the other rows (countries) in each column (day) the death cases will be added to the previous one
+                        # for all the other rows (countries) in each column (day) 
+                        # the death cases will be added to the previous one
                         world_total[column] += self.df_total.iloc[row_idx, col_idx]
 
         self.df_total = self.df_total.append(world_total, ignore_index=True)
 
-        # append to DataFrame for daily deaths (works just like for total deaths but uses self.df_daily)
+        # append to DataFrame for daily deaths (works just like for total deaths 
+        # but uses self.df_daily)
         world_daily = {}
         for column in self.df_daily.columns:
             world_daily[column] = None
@@ -74,22 +78,26 @@ class CovidData():
 
     def get_daily_deaths(self): 
         for column in self.df_total.columns:
-            self.daily_deaths[column] = [] 
+            self.daily_deaths[column] = []
 
         for row_idx in range(0, len(self.df_total)):
             for col_idx in range(0, len(self.df_total.columns)):
                 column = self.df_total.columns[col_idx]
                 if col_idx <= 4: 
-                    # concerns all columns that do not contain data of death cases as well as for the first day of documentation
-                    self.daily_deaths[column].append(self.df_total.iloc[row_idx, col_idx])
+                    # concerns all columns that do not contain data of death cases 
+                    # as well as for the first day of documentation
+                    self.daily_deaths[column].append(self.df_total.
+                            iloc[row_idx, col_idx])
                 else: 
                     # calculates the difference between today and yesterday
-                    self.daily_deaths[column].append(self.df_total.iloc[row_idx, col_idx] - self.df_total.iloc[row_idx, col_idx-1])
+                    self.daily_deaths[column].append(
+                            self.df_total.iloc[row_idx, col_idx] - 
+                            self.df_total.iloc[row_idx, col_idx-1])
 
         # created dict can now be transformed into a DataFrame
         return pd.DataFrame(self.daily_deaths)
 
-        
+
     def select_country(self, name="US", from_df="daily"):
         if from_df == "daily":
             s = self.df_daily[self.df_daily["Country/Region"] == name].iloc[:, 4:]
@@ -132,6 +140,7 @@ class CovidData():
             csv_file.close()
             print("successfully updated {}".
                   format(JHU_UPDATED_DATA_FILENAME))
+
 
     def usage():
         print(usage_msg)
