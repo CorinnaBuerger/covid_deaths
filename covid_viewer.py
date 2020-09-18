@@ -91,17 +91,30 @@ class CovidData():
         self.selected.plot(kind="bar").set_xticklabels(self.dates)
         plt.show()
 
-def usage():
-    print(
-"""Usage: covid_viewer <country> <total/daily>
+
+    def update_local_data():
+        print("make an URL request using the `request' module")
+
+
+    def usage():
+        print(
+"""Usage: covid_viewer <country> <total/daily> [--update] [--help]
+    --update\t\tupdate the local COVID data copy from JHU
+    --help\t\tdisplay this help message
 
 Copyright (c) 2020 by Corinna Buerger"""
-   )
+        )
 
 if __name__ == "__main__":
     if len(argv) < 3:
-        usage()
+        CovidData.usage()
         exit(1)
+
+    for param in argv:
+        if param == "--update":
+            CovidData.update_local_data()
+        if param == "--help":
+            CovidData.usage()  # TODO
 
     # TODO: validate, that country and df_type exist in df, 
     #       otherwise use a sensible default
