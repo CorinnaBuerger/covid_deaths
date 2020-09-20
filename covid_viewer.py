@@ -1,6 +1,8 @@
+from datetime import datetime
+from matplotlib.dates import DateFormatter  # type: ignore
 from sys import argv, exit
-import matplotlib.pyplot as plt  # type: ignore
-import pandas as pd              # type: ignore
+import matplotlib.pyplot as plt             # type: ignore
+import pandas as pd                         # type: ignore
 import requests
 
 usage_msg = ("""Usage: covid_viewer <country> <total/daily> [--update] [--help]
@@ -14,10 +16,12 @@ JHU_UPDATED_DATA_FILENAME = "covid_deaths.csv"  # NOTE: potentially overrides
 
 
 class CovidData():
-    def __init__(self, infile="covid-deaths.csv"):
+    def __init__(self, infile="covid_deaths.csv"):
         # pd.DataFrame for total death cases
         self.df_total = pd.read_csv(infile)
-        self.dates = pd.date_range("01/22/2020", "09/16/2020", freq="D").date
+        self.start = self.df_total.columns[4]
+        self.today = self.df_total.columns[-1]
+        self.dates = pd.date_range(self.start, self.today).date
 
         # no country selected yet
         self.selected = None
@@ -119,9 +123,25 @@ class CovidData():
     def plot_selected_country(self):
         if self.selected is None:
             raise ValueError("no country selected")
-        self.selected.plot(kind="bar").set_xticklabels(self.dates)
+
+        fig, ax = plt.subplots()
+        date_format = DateFormatter("%d %b %Y")
+        death_cases = []
+        dates = []
+        for date_str in self.selected.index:
+            date_obj = datetime.strptime(date_str, '%m/%d/%y')
+            dates.append(date_obj)
+        for sub_arr in self.selected.values:
+            death_cases.append(sub_arr[0])
+
+        ax.bar(dates, death_cases)
+        ax.set(xlabel="Date", ylabel="Death Cases")
+        ax.xaxis.set_major_formatter(date_format)
+        fig.subplots_adjust(bottom=0.175)
+        plt.xticks(rotation=35, fontsize=7)
         plt.show()
 
+    @staticmethod
     def update_local_data():
         base_url = "https://raw.githubusercontent.com/"
         url = (base_url +
@@ -143,6 +163,7 @@ class CovidData():
             print("successfully updated {}".
                   format(JHU_UPDATED_DATA_FILENAME))
 
+    @staticmethod
     def usage():
         print(usage_msg)
 
