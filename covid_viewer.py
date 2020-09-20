@@ -143,7 +143,8 @@ class CovidData():
         for sub_arr in self.world_data.values:
             death_cases_world.append(sub_arr[0])
 
-        world_plot = ax.bar(dates, death_cases_world, bottom=0, color="lightgray")
+        world_plot = ax.bar(dates, death_cases_world,
+                            bottom=0, color="lightgray")
 
         country_plot = ax.bar(dates, death_cases, bottom=0)
 
@@ -151,7 +152,8 @@ class CovidData():
         ax.xaxis.set_major_formatter(date_format)
         fig.subplots_adjust(bottom=0.175)
         plt.xticks(rotation=35, fontsize=7)
-        plt.legend((world_plot[0], country_plot[0]), ("Worldwide", "{}".format(name)))
+        plt.legend((world_plot[0], country_plot[0]),
+                   ("Worldwide", "{}".format(name)))
         plt.show()
 
     @staticmethod
@@ -194,8 +196,8 @@ if __name__ == "__main__":
 
     # TODO: validate, that country and df_type exist in df,
     #       otherwise use a sensible default
-    country = argv[1]
-    df_type = argv[2]
+    country = argv[1].capitalize()
+    df_type = argv[2].lower()
 
     covid_data = CovidData()
     covid_data.select_country(name=country, from_df=df_type)
