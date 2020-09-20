@@ -196,7 +196,10 @@ if __name__ == "__main__":
 
     # TODO: validate, that country and df_type exist in df,
     #       otherwise use a sensible default
-    country = argv[1].capitalize()
+    if argv[1].lower() == "us":
+        country = "US"
+    else:
+        country = argv[1].capitalize()
     df_type = argv[2].lower()
 
     covid_data = CovidData()
