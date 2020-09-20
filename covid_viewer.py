@@ -1,3 +1,5 @@
+from bokeh.plotting import figure           # type: ignore
+from bokeh.io import output_file, show      # type: ignore
 from datetime import datetime
 from matplotlib.dates import DateFormatter  # type: ignore
 from sys import argv, exit
@@ -126,12 +128,10 @@ class CovidData():
         s = s.rename(columns={col_names[0]: name})
         self.selected = s
 
-    def plot_selected_country(self, name):
+    def plot_selected_country(self, name, module="bokeh"):
         if self.selected is None:
             raise ValueError("no country selected")
 
-        fig, ax = plt.subplots()
-        date_format = DateFormatter("%d %b %Y")
         death_cases = []
         death_cases_world = []
         dates = []
@@ -143,18 +143,35 @@ class CovidData():
         for sub_arr in self.world_data.values:
             death_cases_world.append(sub_arr[0])
 
-        world_plot = ax.bar(dates, death_cases_world,
-                            bottom=0, color="lightgray")
+        if module == "bokeh":
 
-        country_plot = ax.bar(dates, death_cases, bottom=0)
+            colors = ["lightgray", "blue"]
+            p = figure(x_axis_type="datetime")
+            p.vbar(x=dates, color=colors[0], top=death_cases_world,
+                   width=0.9, legend_label="Worldwide")
+            p.vbar(x=dates, color=colors[1], top=death_cases,
+                   width=0.9, legend_label=name)
+            p.legend.location = "top_left"
+            p.yaxis.axis_label = "Death Cases"
+            p.xaxis.axis_label = "Date"
 
-        ax.set(xlabel="Date", ylabel="Death Cases")
-        ax.xaxis.set_major_formatter(date_format)
-        fig.subplots_adjust(bottom=0.175)
-        plt.xticks(rotation=35, fontsize=7)
-        plt.legend((world_plot[0], country_plot[0]),
-                   ("Worldwide", "{}".format(name)))
-        plt.show()
+            output_file("test.html")
+            show(p)
+
+        if module == "mpl":
+
+            fig, ax = plt.subplots()
+            date_format = DateFormatter("%d %b %Y")
+            world_plot = ax.bar(dates, death_cases_world,
+                                bottom=0, color="lightgray")
+            country_plot = ax.bar(dates, death_cases, bottom=0)
+            ax.set(xlabel="Date", ylabel="Death Cases")
+            ax.xaxis.set_major_formatter(date_format)
+            fig.subplots_adjust(bottom=0.175)
+            plt.xticks(rotation=35, fontsize=7)
+            plt.legend((world_plot[0], country_plot[0]),
+                       ("Worldwide", "{}".format(name)))
+            plt.show()
 
     @staticmethod
     def update_local_data():
@@ -196,12 +213,13 @@ if __name__ == "__main__":
 
     # TODO: validate, that country and df_type exist in df,
     #       otherwise use a sensible default
-    if argv[1].lower() == "us":
+    if argv[1].lower() == "us" or argv[1].lower() == "usa":
         country = "US"
     else:
         country = argv[1].capitalize()
     df_type = argv[2].lower()
+    module = argv[3].lower()
 
     covid_data = CovidData()
     covid_data.select_country(name=country, from_df=df_type)
-    covid_data.plot_selected_country(name=country)
+    covid_data.plot_selected_country(name=country, module=module)
