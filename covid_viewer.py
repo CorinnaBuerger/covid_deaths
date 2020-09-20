@@ -25,6 +25,7 @@ class CovidData():
 
         # no country selected yet
         self.selected = None
+        self.world_data = None
 
         # will be filled and transformed into self.df_daily
         self.daily_deaths = {}
@@ -108,37 +109,49 @@ class CovidData():
         if from_df == "daily":
             s = self.df_daily[self.df_daily["Country/Region"] ==
                               name].iloc[:, 4:]
+            self.world_data = self.df_daily[self.df_daily["Country/Region"]
+                                            == "World"].iloc[:, 4:]
         elif from_df == "total":
             s = self.df_total[self.df_daily["Country/Region"] ==
                               name].iloc[:, 4:]
+            self.world_data = self.df_total[self.df_total["Country/Region"]
+                                            == "World"].iloc[:, 4:]
         else:
             raise ValueError("invalid from_df key")
         s = s.transpose()
+        self.world_data = self.world_data.transpose()
         col_names = s.columns.tolist()
         if (len(col_names) > 1):
             print("changing just the first column's name to {}".format(name))
         s = s.rename(columns={col_names[0]: name})
         self.selected = s
 
-    def plot_selected_country(self):
+    def plot_selected_country(self, name):
         if self.selected is None:
             raise ValueError("no country selected")
 
         fig, ax = plt.subplots()
         date_format = DateFormatter("%d %b %Y")
         death_cases = []
+        death_cases_world = []
         dates = []
         for date_str in self.selected.index:
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             dates.append(date_obj)
         for sub_arr in self.selected.values:
             death_cases.append(sub_arr[0])
+        for sub_arr in self.world_data.values:
+            death_cases_world.append(sub_arr[0])
 
-        ax.bar(dates, death_cases)
+        world_plot = ax.bar(dates, death_cases_world, bottom=0, color="lightgray")
+
+        country_plot = ax.bar(dates, death_cases, bottom=0)
+
         ax.set(xlabel="Date", ylabel="Death Cases")
         ax.xaxis.set_major_formatter(date_format)
         fig.subplots_adjust(bottom=0.175)
         plt.xticks(rotation=35, fontsize=7)
+        plt.legend((world_plot[0], country_plot[0]), ("Worldwide", "{}".format(name)))
         plt.show()
 
     @staticmethod
@@ -186,4 +199,4 @@ if __name__ == "__main__":
 
     covid_data = CovidData()
     covid_data.select_country(name=country, from_df=df_type)
-    covid_data.plot_selected_country()
+    covid_data.plot_selected_country(name=country)
