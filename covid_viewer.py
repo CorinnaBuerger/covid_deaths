@@ -1,4 +1,4 @@
-from bokeh.layouts import row
+from bokeh.layouts import row               # type: ignore
 from bokeh.models import CustomJS, Select   # type: ignore
 from bokeh.plotting import figure           # type: ignore
 from bokeh.io import output_file, show      # type: ignore
@@ -146,7 +146,6 @@ class CovidData():
             death_cases_world.append(sub_arr[0])
 
         if module == "bokeh":
-
             colors = ["lightgray", "blue"]
             p = figure(x_axis_type="datetime")
             p.vbar(x=dates, color=colors[0], top=death_cases_world,
@@ -163,9 +162,12 @@ class CovidData():
             options = self.df_daily["Country/Region"].tolist()
             select = Select(title="Select a country", value=name,
                             options=options)
-            select.js_on_change("value", CustomJS(code="""
-                console.log('select: value=' + this.value)
-                """))
+            with open("main.js", "r") as f:
+                # select.js_on_change("value", CustomJS(code="""
+                #     console.log('select: value=' + this.value)
+                #     """))
+                # TODO: test and fix me
+                select.js_on_change("value", CustomJS(code=f.readlines()[0]))
             show(row(p, select))
 
         if module == "mpl":
