@@ -1,3 +1,5 @@
+from bokeh.layouts import row
+from bokeh.models import CustomJS, Select   # type: ignore
 from bokeh.plotting import figure           # type: ignore
 from bokeh.io import output_file, show      # type: ignore
 from datetime import datetime
@@ -156,7 +158,15 @@ class CovidData():
             p.xaxis.axis_label = "Date"
 
             output_file("test.html")
-            show(p)
+
+            # dropdown menu
+            options = self.df_daily["Country/Region"].tolist()
+            select = Select(title="Select a country", value=name,
+                            options=options)
+            select.js_on_change("value", CustomJS(code="""
+                console.log('select: value=' + this.value)
+                """))
+            show(row(p, select))
 
         if module == "mpl":
 
