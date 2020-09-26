@@ -153,6 +153,7 @@ class CovidData():
                 if key_two in keys_to_ignore:
                     continue
                 else:
+                    # sums up countries that occur multiple times
                     helper_list.append(sum(value_two))
             df_dict[key] = helper_list
 
