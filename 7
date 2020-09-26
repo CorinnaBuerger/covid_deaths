@@ -1,5 +1,5 @@
 from bokeh.layouts import row               # type: ignore
-from bokeh.models import ColumnDataSource, CustomJS, Select   # type: ignore
+from bokeh.models import CustomJS, Select   # type: ignore
 from bokeh.plotting import figure           # type: ignore
 from bokeh.io import output_file, show      # type: ignore
 from datetime import datetime
@@ -141,44 +141,27 @@ class CovidData():
         if self.selected is None:
             raise ValueError("no country selected")
 
-        # create dictionary out of df that can be put into JS function
-        df_dict_nested = self.current_df.groupby("Country/Region", 
+        df_dict = self.current_df.groupby("Country/Region", 
                                           sort=False).apply(lambda x: x.to_dict(
-                                                            orient="list")).to_dict()
-        df_dict = {}
-        keys_to_ignore = ["Province/State", "Country/Region", "Lat", "Long"]
-        for key, value in df_dict_nested.items():
-            helper_list = []
-            for key_two, value_two in value.items():
-                if key_two in keys_to_ignore:
-                    continue
-                else:
-                    helper_list.append(sum(value_two))
-            df_dict[key] = helper_list
-
+                                                            orient="list"))
+        print(df_dict["Afghanistan"])
         death_cases = []
         death_cases_world = []
         dates = []
         for date_str in self.selected.index:
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             dates.append(date_obj)
-        df_dict["dates"] = dates
         for sub_arr in self.selected.values:
             death_cases.append(sub_arr[0])
         for sub_arr in self.world_data.values:
             death_cases_world.append(sub_arr[0])
 
         if module == "bokeh":
-
-            # also necessary to make it compatible with JS function
-            source = ColumnDataSource(data=df_dict)
-
             colors = ["lightgray", "blue"]
             p = figure(x_axis_type="datetime")
-            print(df_dict)
-            p.vbar(x='dates', color=colors[0], top="World", source=source,
+            p.vbar(x=dates, color=colors[0], top=death_cases_world,
                    width=0.9, legend_label="Worldwide")
-            p.vbar(x='dates', color=colors[1], top=name, source=source,
+            p.vbar(x=dates, color=colors[1], top=death_cases,
                    width=0.9, legend_label=name)
             p.legend.location = "top_left"
             p.yaxis.axis_label = "Death Cases"
@@ -187,7 +170,7 @@ class CovidData():
             output_file("test.html")
 
             # dropdown menu
-            options = [*df_dict.keys()]
+            options = self.df_daily["Country/Region"].tolist()
             select = Select(title="Select a country", value=name,
                             options=options)
             with open("main.js", "r") as f:
@@ -195,7 +178,7 @@ class CovidData():
                 #     console.log('select: value=' + this.value)
                 #     """))
                 # TODO: test and fix me
-                select.js_on_change("value", CustomJS(args = dict(graph=source, df_dict=df_dict), code=f.read()))
+                select.js_on_change("value", CustomJS(code=f.readlines()[0]))
             show(row(p, select))
 
         if module == "mpl":
