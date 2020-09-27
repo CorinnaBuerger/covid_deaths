@@ -1,5 +1,5 @@
 from bokeh.layouts import row               # type: ignore
-from bokeh.models import ColumnDataSource, CustomJS, Select   # type: ignore
+from bokeh.models import ColumnDataSource, CustomJS, RadioButtonGroup, Select   # type: ignore
 from bokeh.plotting import figure           # type: ignore
 from bokeh.io import output_file, show      # type: ignore
 from datetime import datetime
@@ -181,7 +181,7 @@ class CovidData():
             p.vbar(x='dates', color=colors[0], top="World",source=source,
                    width=0.9, legend_label="Worldwide")
             p.vbar(x='dates', color=colors[1], top="selected", source=source,
-                   width=0.9, legend_label=name)
+                   width=0.9, legend_label="Selected Country")
             p.legend.location = "top_left"
             p.yaxis.axis_label = "Death Cases"
             p.xaxis.axis_label = "Date"
@@ -201,6 +201,17 @@ class CovidData():
                                     CustomJS(args=dict(source=source, 
                                                        df_dict=df_dict), 
                                              code=f.read()))
+
+
+            # radio button group
+            labels = ["daily", "total"]
+            radio_button_group = RadioButtonGroup(labels=labels, active = 0)
+            with open("radio_button_group.js", "r") as f:
+                radio_button_group.js_on_click(CustomJS(code=f.read()))
+                # make df_dict_total and df_dict_daily
+                # depending on selected radio button, 
+                # put one of them into ColumnDataSource
+
             show(row(p, select))
 
         if module == "mpl":
