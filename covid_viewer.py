@@ -172,14 +172,15 @@ class CovidData():
         if module == "bokeh":
 
             # also necessary to make it compatible with JS function
+            df_dict["selected"] = df_dict[name]
             source = ColumnDataSource(data=df_dict)
+
 
             colors = ["lightgray", "blue"]
             p = figure(x_axis_type="datetime")
-            print(df_dict)
-            p.vbar(x='dates', color=colors[0], top="World", source=source,
+            p.vbar(x='dates', color=colors[0], top="World",source=source,
                    width=0.9, legend_label="Worldwide")
-            p.vbar(x='dates', color=colors[1], top=name, source=source,
+            p.vbar(x='dates', color=colors[1], top="selected", source=source,
                    width=0.9, legend_label=name)
             p.legend.location = "top_left"
             p.yaxis.axis_label = "Death Cases"
@@ -196,7 +197,10 @@ class CovidData():
                 #     console.log('select: value=' + this.value)
                 #     """))
                 # TODO: test and fix me
-                select.js_on_change("value", CustomJS(args = dict(graph=source, df_dict=df_dict), code=f.read()))
+                select.js_on_change("value",
+                                    CustomJS(args=dict(source=source, 
+                                                       df_dict=df_dict), 
+                                             code=f.read()))
             show(row(p, select))
 
         if module == "mpl":
