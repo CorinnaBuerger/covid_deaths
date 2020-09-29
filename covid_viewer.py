@@ -1,12 +1,13 @@
-from bokeh.layouts import row               # type: ignore
-from bokeh.models import ColumnDataSource, CustomJS, RadioButtonGroup, Select   # type: ignore
-from bokeh.plotting import figure           # type: ignore
-from bokeh.io import output_file, show      # type: ignore
+from bokeh.layouts import row, column                # type: ignore
+from bokeh.models import ColumnDataSource, CustomJS  # type: ignore
+from bokeh.models import RadioButtonGroup, Select
+from bokeh.plotting import figure                    # type: ignore
+from bokeh.io import output_file, show               # type: ignore
 from datetime import datetime
-from matplotlib.dates import DateFormatter  # type: ignore
+from matplotlib.dates import DateFormatter           # type: ignore
 from sys import argv, exit
-import matplotlib.pyplot as plt             # type: ignore
-import pandas as pd                         # type: ignore
+import matplotlib.pyplot as plt                      # type: ignore
+import pandas as pd                                  # type: ignore
 import requests
 
 usage_msg = ("""Usage: covid_viewer <country> <total/daily> [--update] [--help]
@@ -47,8 +48,8 @@ class CovidData():
     def get_world_deaths(self):
         # append to DataFrame for total deaths
         world_total = {}
-        for column in self.df_total.columns:
-            world_total[column] = None
+        for column_in_df in self.df_total.columns:
+            world_total[column_in_df] = None
 
         for col_idx in range(0, len(self.df_total.columns)):
             column = self.df_total.columns[col_idx]
@@ -93,8 +94,8 @@ class CovidData():
         self.df_daily = self.df_daily.append(world_daily, ignore_index=True)
 
     def get_daily_deaths(self):
-        for column in self.df_total.columns:
-            self.daily_deaths[column] = []
+        for column_in_df in self.df_total.columns:
+            self.daily_deaths[column_in_df] = []
 
         for row_idx in range(0, len(self.df_total)):
             for col_idx in range(0, len(self.df_total.columns)):
@@ -123,31 +124,42 @@ class CovidData():
         else:
             raise ValueError("invalid from_df key")
 
-        s = self.current_df[self.current_df["Country/Region"] ==
-                          name].iloc[:, 4:]
-        self.world_data = self.current_df[self.current_df["Country/Region"]
-                                        == "World"].iloc[:, 4:]
+        s_daily = self.df_daily[self.df_daily["Country/Region"]
+                                == name].iloc[:, 4:]
+        s_total = self.df_total[self.df_total["Country/Region"]
+                                == name].iloc[:, 4:]
+        self.world_data_daily = self.df_daily[self.df_daily["Country/Region"]
+                                              == "World"].iloc[:, 4:]
+        self.world_data_total = self.df_total[self.df_total["Country/Region"]
+                                              == "World"].iloc[:, 4:]
 
-        s = s.transpose()
-        self.world_data = self.world_data.transpose()
+        s_daily = s_daily.transpose()
+        s_total = s_total.transpose()
+        self.world_data_daily = self.world_data_daily.transpose()
+        self.world_data_total = self.world_data_total.transpose()
 
-        col_names = s.columns.tolist()
+        # only doing this for daily data can maybe lead to bugs
+        col_names = s_daily.columns.tolist()
         if (len(col_names) > 1):
             print("changing just the first column's name to {}".format(name))
-        s = s.rename(columns={col_names[0]: name})
-        self.selected = s
+        s_daily = s_daily.rename(columns={col_names[0]: name})
+        self.selected = s_daily
 
-    def plot_selected_country(self, name, module="bokeh"):
+    def plot_selected_country(self, name, selected_df, module="bokeh"):
         if self.selected is None:
             raise ValueError("no country selected")
 
         # create dictionary out of df that can be put into JS function
-        df_dict_nested = self.current_df.groupby("Country/Region", 
-                                          sort=False).apply(lambda x: x.to_dict(
-                                                            orient="list")).to_dict()
-        df_dict = {}
+        grouped_df_d = self.df_daily.groupby("Country/Region", sort=False)
+        grouped_df_t = self.df_total.groupby("Country/Region", sort=False)
+        grouped_list_d = grouped_df_d.apply(lambda x: x.to_dict(orient="list"))
+        grouped_list_t = grouped_df_t.apply(lambda x: x.to_dict(orient="list"))
+        df_dict_nested_d = grouped_list_d.to_dict()
+        df_dict_nested_t = grouped_list_t.to_dict()
+        df_dict_daily = {}
+        df_dict_total = {}
         keys_to_ignore = ["Province/State", "Country/Region", "Lat", "Long"]
-        for key, value in df_dict_nested.items():
+        for key, value in df_dict_nested_d.items():
             helper_list = []
             for key_two, value_two in value.items():
                 if key_two in keys_to_ignore:
@@ -155,7 +167,16 @@ class CovidData():
                 else:
                     # sums up countries that occur multiple times
                     helper_list.append(sum(value_two))
-            df_dict[key] = helper_list
+            df_dict_daily[key] = helper_list
+        for key, value in df_dict_nested_t.items():
+            helper_list = []
+            for key_two, value_two in value.items():
+                if key_two in keys_to_ignore:
+                    continue
+                else:
+                    # sums up countries that occur multiple times
+                    helper_list.append(sum(value_two))
+            df_dict_total[key] = helper_list
 
         death_cases = []
         death_cases_world = []
@@ -163,22 +184,32 @@ class CovidData():
         for date_str in self.selected.index:
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             dates.append(date_obj)
-        df_dict["dates"] = dates
+        df_dict_daily["dates"] = dates
+        df_dict_total["dates"] = dates
+        # cave: only for daily
         for sub_arr in self.selected.values:
             death_cases.append(sub_arr[0])
-        for sub_arr in self.world_data.values:
+        for sub_arr in self.world_data_daily.values:
             death_cases_world.append(sub_arr[0])
 
         if module == "bokeh":
 
             # also necessary to make it compatible with JS function
-            df_dict["selected"] = df_dict[name]
-            source = ColumnDataSource(data=df_dict)
+            df_dict_daily["selected"] = df_dict_daily[name]
+            df_dict_total["selected"] = df_dict_total[name]
+            source_daily = ColumnDataSource(data=df_dict_daily)
+            source_total = ColumnDataSource(data=df_dict_total)
 
+            if selected_df == "daily":
+                df_dict = df_dict_daily
+                source = source_daily
+            elif selected_df == "total":
+                df_dict = df_dict_total
+                source = source_total
 
             colors = ["lightgray", "blue"]
             p = figure(x_axis_type="datetime")
-            p.vbar(x='dates', color=colors[0], top="World",source=source,
+            p.vbar(x='dates', color=colors[0], top="World", source=source,
                    width=0.9, legend_label="Worldwide")
             p.vbar(x='dates', color=colors[1], top="selected", source=source,
                    width=0.9, legend_label="Selected Country")
@@ -198,21 +229,29 @@ class CovidData():
                 #     """))
                 # TODO: test and fix me
                 select.js_on_change("value",
-                                    CustomJS(args=dict(source=source, 
-                                                       df_dict=df_dict), 
+                                    CustomJS(args=dict(source=source,
+                                                       df_dict_t=df_dict_total,
+                                                       df_dict_d=df_dict_daily),
                                              code=f.read()))
 
-
-            # radio button group
-            labels = ["daily", "total"]
-            radio_button_group = RadioButtonGroup(labels=labels, active = 0)
+            # toggler
+            labels = ["Daily", "Total"]
+            toggler = Select(title="Daily or Total", value=selected_df,
+                             options=labels)
             with open("radio_button_group.js", "r") as f:
-                radio_button_group.js_on_click(CustomJS(code=f.read()))
+                toggler.js_on_change("value",
+                                     CustomJS(args=dict(source=source,
+                                                        source_d=source_daily,
+                                                        source_t=source_total,
+                                                        df_dict_t=df_dict_total,
+                                                        df_dict_d=df_dict_daily),
+                                              code=f.read()))
                 # make df_dict_total and df_dict_daily
-                # depending on selected radio button, 
+                # depending on selected radio button,
                 # put one of them into ColumnDataSource
 
-            show(row(p, select))
+            menu = column(toggler, select)
+            show(row(p, menu))
 
         if module == "mpl":
 
@@ -281,4 +320,5 @@ if __name__ == "__main__":
 
     covid_data = CovidData()
     covid_data.select_country(name=country, from_df=df_type)
-    covid_data.plot_selected_country(name=country, module=module)
+    covid_data.plot_selected_country(name=country, selected_df=df_type,
+                                     module=module)
