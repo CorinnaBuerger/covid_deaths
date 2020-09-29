@@ -1,13 +1,12 @@
-from bokeh.layouts import row, column                # type: ignore
-from bokeh.models import ColumnDataSource, CustomJS  # type: ignore
-from bokeh.models import RadioButtonGroup, Select
-from bokeh.plotting import figure                    # type: ignore
-from bokeh.io import output_file, show               # type: ignore
+from bokeh.layouts import row, column                        # type: ignore
+from bokeh.models import ColumnDataSource, CustomJS, Select  # type: ignore
+from bokeh.plotting import figure                            # type: ignore
+from bokeh.io import output_file, show                       # type: ignore
 from datetime import datetime
-from matplotlib.dates import DateFormatter           # type: ignore
+from matplotlib.dates import DateFormatter                   # type: ignore
 from sys import argv, exit
-import matplotlib.pyplot as plt                      # type: ignore
-import pandas as pd                                  # type: ignore
+import matplotlib.pyplot as plt                              # type: ignore
+import pandas as pd                                          # type: ignore
 import requests
 
 usage_msg = ("""Usage: covid_viewer <country> <total/daily> [--update] [--help]
@@ -224,31 +223,19 @@ class CovidData():
             select = Select(title="Select a country", value=name,
                             options=options)
             with open("main.js", "r") as f:
-                # select.js_on_change("value", CustomJS(code="""
-                #     console.log('select: value=' + this.value)
-                #     """))
-                # TODO: test and fix me
-                select.js_on_change("value",
-                                    CustomJS(args=dict(source=source,
-                                                       df_dict_t=df_dict_total,
-                                                       df_dict_d=df_dict_daily),
-                                             code=f.read()))
+                select.js_on_change("value", CustomJS(
+                    args=dict(source=source, df_dict_t=df_dict_total,
+                              df_dict_d=df_dict_daily), code=f.read()))
 
             # toggler
             labels = ["Daily", "Total"]
             toggler = Select(title="Daily or Total", value=selected_df,
                              options=labels)
             with open("radio_button_group.js", "r") as f:
-                toggler.js_on_change("value",
-                                     CustomJS(args=dict(source=source,
-                                                        source_d=source_daily,
-                                                        source_t=source_total,
-                                                        df_dict_t=df_dict_total,
-                                                        df_dict_d=df_dict_daily),
-                                              code=f.read()))
-                # make df_dict_total and df_dict_daily
-                # depending on selected radio button,
-                # put one of them into ColumnDataSource
+                toggler.js_on_change("value", CustomJS(
+                    args=dict(source=source, source_d=source_daily,
+                              source_t=source_total, df_dict_t=df_dict_total,
+                              df_dict_d=df_dict_daily), code=f.read()))
 
             menu = column(toggler, select)
             show(row(p, menu))
