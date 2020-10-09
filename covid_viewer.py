@@ -212,13 +212,17 @@ class CovidData():
             output_file("test.html")
 
             # dropdown menu
+
+            # dates can't be sorted like this, so it has to be removed for this step
+            df_dict_total.pop("dates")
             sort_options = sorted(df_dict_total.items(), key=lambda x: x[1][-1],
                                   reverse=True)
             print(sort_options)
-            print(df_dict_total.items())
-            options = [*df_dict_total.keys()]
-            options.remove("dates")
-            options.remove("selected")
+            options = []
+            for tpl in sort_options:
+                options.append(tpl[0])
+
+            df_dict_total["dates"] = dates
 
             select = Select(title="Select a country", value=name,
                             options=options)
@@ -226,13 +230,12 @@ class CovidData():
                 select.js_on_change("value", CustomJS(
                     args=dict(source_d=source_daily, source_t=source_total,
                               df_dict_t=df_dict_total, df_dict_d=df_dict_daily,
-                              which_function="update-ctry"), code=f.read()))
+                              ), code=f.read()))
 
             plots = row(pd, pt)
             show(column(select, plots))
 
         if module == "mpl":
-
             death_cases = []
             death_cases_world = []
             # cave: only for daily
