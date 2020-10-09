@@ -24,9 +24,6 @@ class CovidData():
         # pd.DataFrame for total death cases
         self.df_total = pd.read_csv(infile)
 
-        # df that will be used is not specified yet
-        self.current_df = None
-
         self.start = self.df_total.columns[4]
         self.today = self.df_total.columns[-1]
         self.dates = pd.date_range(self.start, self.today).date
@@ -113,16 +110,7 @@ class CovidData():
         # created dict can now be transformed into a DataFrame
         return pd.DataFrame(self.daily_deaths)
 
-    def select_country(self, name="US", from_df="daily"):
-        if from_df == "daily":
-            self.current_df = self.df_daily
-
-        elif from_df == "total":
-            self.current_df = self.df_total
-
-        else:
-            raise ValueError("invalid from_df key")
-
+    def select_country(self, name="US"):
         s_daily = self.df_daily[self.df_daily["Country/Region"]
                                 == name].iloc[:, 4:]
         s_total = self.df_total[self.df_total["Country/Region"]
@@ -144,7 +132,7 @@ class CovidData():
         s_daily = s_daily.rename(columns={col_names[0]: name})
         self.selected = s_daily
 
-    def plot_selected_country(self, name, selected_df, module="bokeh"):
+    def plot_selected_country(self, name, module="bokeh"):
         if self.selected is None:
             raise ValueError("no country selected")
 
@@ -177,19 +165,13 @@ class CovidData():
                     helper_list.append(sum(value_two))
             df_dict_total[key] = helper_list
 
-        death_cases = []
-        death_cases_world = []
         dates = []
         for date_str in self.selected.index:
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             dates.append(date_obj)
         df_dict_daily["dates"] = dates
         df_dict_total["dates"] = dates
-        # cave: only for daily
-        for sub_arr in self.selected.values:
-            death_cases.append(sub_arr[0])
-        for sub_arr in self.world_data_daily.values:
-            death_cases_world.append(sub_arr[0])
+
 
         if module == "bokeh":
 
@@ -200,6 +182,10 @@ class CovidData():
             source_total = ColumnDataSource(data=df_dict_total)
 
             # create two plots
+            xaxis_label = "Date"
+            yaxis_label = "Death Cases"
+            legend_loc = "top_left"
+
             colors = ["lightgray", "blue"]
             pd = figure(x_axis_type="datetime")
             pt = figure(x_axis_type="datetime")
@@ -210,9 +196,9 @@ class CovidData():
             pd.vbar(x='dates', color=colors[1], top="selected",
                     source=source_daily, width=0.9,
                     legend_label="Selected Country")
-            pd.legend.location = "top_left"
-            pd.yaxis.axis_label = "Death Cases"
-            pd.xaxis.axis_label = "Date"
+            pd.legend.location = legend_loc
+            pd.yaxis.axis_label = yaxis_label
+            pd.xaxis.axis_label = xaxis_label
 
             pt.vbar(x='dates', color=colors[0], top="World",
                     source=source_total,
@@ -220,9 +206,9 @@ class CovidData():
             pt.vbar(x='dates', color=colors[1], top="selected",
                     source=source_total, width=0.9,
                     legend_label="Selected Country")
-            pt.legend.location = "top_left"
-            pt.yaxis.axis_label = "Death Cases"
-            pt.xaxis.axis_label = "Date"
+            pt.legend.location = legend_loc
+            pt.yaxis.axis_label = yaxis_label
+            pt.xaxis.axis_label = xaxis_label
 
             output_file("test.html")
 
@@ -236,20 +222,18 @@ class CovidData():
                               df_dict_t=df_dict_total, df_dict_d=df_dict_daily,
                               which_function="update-ctry"), code=f.read()))
 
-            # toggler
-            # labels = ["Daily", "Total"]
-            # toggler = Select(title="Daily or Total", value=selected_df,
-            #                  options=labels)
-            # with open("main.js", "r") as f:
-            #     toggler.js_on_change("value", CustomJS(
-            #         args=dict(source=source, df_dict_t=df_dict_total,
-            #                   df_dict_d=df_dict_daily,
-            #                   which_function="toggler"), code=f.read()))
-
             plots = row(pd, pt)
             show(column(select, plots))
 
         if module == "mpl":
+
+            death_cases = []
+            death_cases_world = []
+            # cave: only for daily
+            for sub_arr in self.selected.values:
+                death_cases.append(sub_arr[0])
+            for sub_arr in self.world_data_daily.values:
+                death_cases_world.append(sub_arr[0])
 
             fig, ax = plt.subplots()
             date_format = DateFormatter("%d %b %Y")
@@ -292,7 +276,7 @@ class CovidData():
 
 
 if __name__ == "__main__":
-    if len(argv) < 3:
+    if len(argv) < 2:
         CovidData.usage()
         exit(1)
 
@@ -302,19 +286,17 @@ if __name__ == "__main__":
         if param == "--help":
             CovidData.usage()
 
-    # TODO: validate, that country and df_type exist in df,
+    # TODO: validate, that country exists in df,
     #       otherwise use a sensible default
     if argv[1].lower() == "us" or argv[1].lower() == "usa":
         country = "US"
     else:
         country = argv[1].capitalize()
-    df_type = argv[2].lower()
-    if argv[3] == "":
+    if argv[2] == "":
         module = "bokeh"
     else:
-        module = argv[3].lower()
+        module = argv[2].lower()
 
     covid_data = CovidData()
-    covid_data.select_country(name=country, from_df=df_type)
-    covid_data.plot_selected_country(name=country, selected_df=df_type,
-                                     module=module)
+    covid_data.select_country(name=country)
+    covid_data.plot_selected_country(name=country, module=module)
