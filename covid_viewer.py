@@ -199,46 +199,55 @@ class CovidData():
             source_daily = ColumnDataSource(data=df_dict_daily)
             source_total = ColumnDataSource(data=df_dict_total)
 
-            if selected_df == "daily":
-                df_dict = df_dict_daily
-                source = source_daily
-            elif selected_df == "total":
-                df_dict = df_dict_total
-                source = source_total
-
+            # create two plots
             colors = ["lightgray", "blue"]
-            p = figure(x_axis_type="datetime")
-            p.vbar(x='dates', color=colors[0], top="World", source=source,
-                   width=0.9, legend_label="Worldwide")
-            p.vbar(x='dates', color=colors[1], top="selected", source=source,
-                   width=0.9, legend_label="Selected Country")
-            p.legend.location = "top_left"
-            p.yaxis.axis_label = "Death Cases"
-            p.xaxis.axis_label = "Date"
+            pd = figure(x_axis_type="datetime")
+            pt = figure(x_axis_type="datetime")
+
+            pd.vbar(x='dates', color=colors[0], top="World",
+                    source=source_daily,
+                    width=0.9, legend_label="Worldwide")
+            pd.vbar(x='dates', color=colors[1], top="selected",
+                    source=source_daily, width=0.9,
+                    legend_label="Selected Country")
+            pd.legend.location = "top_left"
+            pd.yaxis.axis_label = "Death Cases"
+            pd.xaxis.axis_label = "Date"
+
+            pt.vbar(x='dates', color=colors[0], top="World",
+                    source=source_total,
+                    width=0.9, legend_label="Worldwide")
+            pt.vbar(x='dates', color=colors[1], top="selected",
+                    source=source_total, width=0.9,
+                    legend_label="Selected Country")
+            pt.legend.location = "top_left"
+            pt.yaxis.axis_label = "Death Cases"
+            pt.xaxis.axis_label = "Date"
 
             output_file("test.html")
 
             # dropdown menu
-            options = [*df_dict.keys()]
+            options = [*df_dict_daily.keys()]
             select = Select(title="Select a country", value=name,
                             options=options)
             with open("main.js", "r") as f:
                 select.js_on_change("value", CustomJS(
-                    args=dict(source=source, df_dict_t=df_dict_total,
-                              df_dict_d=df_dict_daily), code=f.read()))
+                    args=dict(source_d=source_daily, source_t=source_total,
+                              df_dict_t=df_dict_total, df_dict_d=df_dict_daily,
+                              which_function="update-ctry"), code=f.read()))
 
             # toggler
-            labels = ["Daily", "Total"]
-            toggler = Select(title="Daily or Total", value=selected_df,
-                             options=labels)
-            with open("radio_button_group.js", "r") as f:
-                toggler.js_on_change("value", CustomJS(
-                    args=dict(source=source, source_d=source_daily,
-                              source_t=source_total, df_dict_t=df_dict_total,
-                              df_dict_d=df_dict_daily), code=f.read()))
+            # labels = ["Daily", "Total"]
+            # toggler = Select(title="Daily or Total", value=selected_df,
+            #                  options=labels)
+            # with open("main.js", "r") as f:
+            #     toggler.js_on_change("value", CustomJS(
+            #         args=dict(source=source, df_dict_t=df_dict_total,
+            #                   df_dict_d=df_dict_daily,
+            #                   which_function="toggler"), code=f.read()))
 
-            menu = column(toggler, select)
-            show(row(p, menu))
+            plots = row(pd, pt)
+            show(column(select, plots))
 
         if module == "mpl":
 
