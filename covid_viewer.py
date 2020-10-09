@@ -172,7 +172,6 @@ class CovidData():
         df_dict_daily["dates"] = dates
         df_dict_total["dates"] = dates
 
-
         if module == "bokeh":
 
             # also necessary to make it compatible with JS function
@@ -182,9 +181,9 @@ class CovidData():
             source_total = ColumnDataSource(data=df_dict_total)
 
             # create two plots
-            xaxis_label = "Date"
-            yaxis_label = "Death Cases"
-            legend_loc = "top_left"
+            XAXIS_LABEL = "Date"
+            YAXIS_LABEL = "Death Cases"
+            LEGEND_LOC = "top_left"
 
             colors = ["lightgray", "blue"]
             pd = figure(x_axis_type="datetime")
@@ -196,9 +195,9 @@ class CovidData():
             pd.vbar(x='dates', color=colors[1], top="selected",
                     source=source_daily, width=0.9,
                     legend_label="Selected Country")
-            pd.legend.location = legend_loc
-            pd.yaxis.axis_label = yaxis_label
-            pd.xaxis.axis_label = xaxis_label
+            pd.legend.location = LEGEND_LOC
+            pd.yaxis.axis_label = YAXIS_LABEL
+            pd.xaxis.axis_label = XAXIS_LABEL
 
             pt.vbar(x='dates', color=colors[0], top="World",
                     source=source_total,
@@ -206,14 +205,21 @@ class CovidData():
             pt.vbar(x='dates', color=colors[1], top="selected",
                     source=source_total, width=0.9,
                     legend_label="Selected Country")
-            pt.legend.location = legend_loc
-            pt.yaxis.axis_label = yaxis_label
-            pt.xaxis.axis_label = xaxis_label
+            pt.legend.location = LEGEND_LOC
+            pt.yaxis.axis_label = YAXIS_LABEL
+            pt.xaxis.axis_label = XAXIS_LABEL
 
             output_file("test.html")
 
             # dropdown menu
-            options = [*df_dict_daily.keys()]
+            sort_options = sorted(df_dict_total.items(), key=lambda x: x[1][-1],
+                                  reverse=True)
+            print(sort_options)
+            print(df_dict_total.items())
+            options = [*df_dict_total.keys()]
+            options.remove("dates")
+            options.remove("selected")
+
             select = Select(title="Select a country", value=name,
                             options=options)
             with open("main.js", "r") as f:
