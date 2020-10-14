@@ -191,9 +191,9 @@ class CovidData():
 
             colors = ["lightgray", "blue"]
             pd = figure(x_axis_type="datetime", title="Daily Deaths", 
-                        tooltips=TOOLTIPS, plot_height=HEIGHT, plot_width=WIDTH)
+                        plot_height=HEIGHT, plot_width=WIDTH)
             pt = figure(x_axis_type="datetime", title="Total Deaths", 
-                        tooltips=TOOLTIPS, plot_height=HEIGHT, plot_width=WIDTH)
+                        plot_height=HEIGHT, plot_width=WIDTH)
 
             pd.vbar(x='dates', color=colors[0], top="World",
                     source=source_daily,
