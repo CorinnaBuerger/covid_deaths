@@ -1,5 +1,6 @@
 from bokeh.layouts import row, column                        # type: ignore
 from bokeh.models import ColumnDataSource, CustomJS, Select  # type: ignore
+from bokeh.models import HoverTool                           # type: ignore
 from bokeh.plotting import figure                            # type: ignore
 from bokeh.io import output_file, show                       # type: ignore
 from datetime import datetime
@@ -184,10 +185,15 @@ class CovidData():
             XAXIS_LABEL = "Date"
             YAXIS_LABEL = "Death Cases"
             LEGEND_LOC = "top_left"
+            TOOLTIPS = [("(x, y)", "($x, $y)")]
+            HEIGHT = 500
+            WIDTH = 500
 
             colors = ["lightgray", "blue"]
-            pd = figure(x_axis_type="datetime")
-            pt = figure(x_axis_type="datetime")
+            pd = figure(x_axis_type="datetime", title="Daily Deaths", 
+                        tooltips=TOOLTIPS, plot_height=HEIGHT, plot_width=WIDTH)
+            pt = figure(x_axis_type="datetime", title="Total Deaths", 
+                        tooltips=TOOLTIPS, plot_height=HEIGHT, plot_width=WIDTH)
 
             pd.vbar(x='dates', color=colors[0], top="World",
                     source=source_daily,
@@ -198,6 +204,7 @@ class CovidData():
             pd.legend.location = LEGEND_LOC
             pd.yaxis.axis_label = YAXIS_LABEL
             pd.xaxis.axis_label = XAXIS_LABEL
+            pd.add_tools(HoverTool(tooltips=TOOLTIPS))
 
             pt.vbar(x='dates', color=colors[0], top="World",
                     source=source_total,
@@ -208,8 +215,9 @@ class CovidData():
             pt.legend.location = LEGEND_LOC
             pt.yaxis.axis_label = YAXIS_LABEL
             pt.xaxis.axis_label = XAXIS_LABEL
+            pt.add_tools(HoverTool(tooltips=TOOLTIPS))
 
-            output_file("test.html")
+            output_file("bokeh.html")
 
             # dropdown menu
 
@@ -217,10 +225,10 @@ class CovidData():
             df_dict_total.pop("dates")
             sort_options = sorted(df_dict_total.items(), key=lambda x: x[1][-1],
                                   reverse=True)
-            print(sort_options)
             options = []
             for tpl in sort_options:
                 options.append(tpl[0])
+            options.remove("selected")
 
             df_dict_total["dates"] = dates
 
@@ -232,8 +240,8 @@ class CovidData():
                               df_dict_t=df_dict_total, df_dict_d=df_dict_daily,
                               ), code=f.read()))
 
-            plots = row(pd, pt)
-            show(column(select, plots))
+            plots = column(pd, pt)
+            show(column(select, plots)) 
 
         if module == "mpl":
             death_cases = []
