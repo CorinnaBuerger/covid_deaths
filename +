@@ -133,7 +133,7 @@ class CovidData():
         s_daily = s_daily.rename(columns={col_names[0]: name})
         self.selected = s_daily
 
-    def plot_selected_country(self, name, output, module="bokeh"):
+    def plot_selected_country(self, name, output_file="bokeh.html", module="bokeh"):
         if self.selected is None:
             raise ValueError("no country selected")
 
@@ -186,8 +186,8 @@ class CovidData():
             YAXIS_LABEL = "Death Cases"
             LEGEND_LOC = "top_left"
             TOOLTIPS = [("(x, y)", "($x, $y)")]
-            HEIGHT = 600
-            WIDTH = 600
+            HEIGHT = 500
+            WIDTH = 500
 
             colors = ["lightgray", "blue"]
             pd = figure(x_axis_type="datetime", title="Daily Deaths", 
@@ -217,7 +217,7 @@ class CovidData():
             pt.xaxis.axis_label = XAXIS_LABEL
             pt.add_tools(HoverTool(tooltips=TOOLTIPS))
 
-            output_file(output)
+            output_file(output_file)
 
             # dropdown menu
 
@@ -241,7 +241,7 @@ class CovidData():
                               ), code=f.read()))
 
             plots = column(pd, pt)
-            show(column(select, plots)) 
+            show(column(plots, select)) 
 
         if module == "mpl":
             death_cases = []
@@ -314,12 +314,12 @@ if __name__ == "__main__":
     else:
         module = argv[2].lower()
 
-    if len(argv) > 2:
-        output = argv[3]
-        print("Don't forget to push your website in order to upload the latest changes made to bokeh.html")
-    else:
-        output = "bokeh.html"
+    output_file = argv[3]
+    print(argv[3])
+    print(output_file)
+    print(type(output_file))
+    exit()
 
     covid_data = CovidData()
     covid_data.select_country(name=country)
-    covid_data.plot_selected_country(name=country, output=output, module=module)
+    covid_data.plot_selected_country(name=country, output_file=output_file, module=module)
