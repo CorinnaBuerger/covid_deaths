@@ -185,7 +185,7 @@ class CovidData():
             XAXIS_LABEL = "Date"
             YAXIS_LABEL = "Death Cases"
             LEGEND_LOC = "top_left"
-            TOOLTIPS = [("(x, y)", "($x, $y)")]
+            TOOLTIPS = [("Deaths", "@x")]
             HEIGHT = 600
             WIDTH = 600
 
@@ -314,11 +314,11 @@ if __name__ == "__main__":
     else:
         module = argv[2].lower()
 
-    if len(argv) > 2:
+    if len(argv) > 3:
         output = argv[3]
-        print("Don't forget to push your website in order to upload the latest changes made to bokeh.html")
+        print("Don't forget to push your website in order to upload the latest changes made to deaths.html")
     else:
-        output = "bokeh.html"
+        output = "deaths.html"
 
     covid_data = CovidData()
     covid_data.select_country(name=country)
