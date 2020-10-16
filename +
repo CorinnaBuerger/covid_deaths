@@ -167,16 +167,11 @@ class CovidData():
             df_dict_total[key] = helper_list
 
         dates = []
-        dates_str = []
         for date_str in self.selected.index:
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             dates.append(date_obj)
-            date_str_new = datetime.strptime(date_str, '%m/%d/%y').strftime('%d %b %Y')
-            dates_str.append(date_str_new)
         df_dict_daily["dates"] = dates
         df_dict_total["dates"] = dates
-        df_dict_daily["dates_str"] = dates_str
-        df_dict_total["dates_str"] = dates_str
 
         if module == "bokeh":
 
@@ -185,49 +180,38 @@ class CovidData():
             df_dict_total["selected"] = df_dict_total[name]
             source_daily = ColumnDataSource(data=df_dict_daily)
             source_total = ColumnDataSource(data=df_dict_total)
+            print(df_dict_daily)
+            print(df_dict_daily["selected"])
 
             # create two plots
             XAXIS_LABEL = "Date"
             YAXIS_LABEL = "Death Cases"
             LEGEND_LOC = "top_left"
-            TOOLTIPS = [("Date", "@dates_str"), ("Deaths of selected country", "@selected"), ("Deaths worldwide", "@World")]
-            TOOLS = [HoverTool(tooltips=TOOLTIPS), "pan", 
-                     "wheel_zoom", "box_zoom", "reset"]
+            TOOLTIPS = [("Deaths", "@selected")]
+            TOOLS = [HoverTool(tooltips=TOOLTIPS), "pan", "wheel_zoom", "reset"]
             HEIGHT = 600
             WIDTH = 600
-            SIZE = 1
-            CIRCLE_SIZE = 8
 
-            colors = ["lightgray", "blue", ]
+            colors = ["lightgray", "blue"]
             pd = figure(x_axis_type="datetime", title="Daily Deaths", 
                         plot_height=HEIGHT, plot_width=WIDTH, tools=TOOLS)
             pt = figure(x_axis_type="datetime", title="Total Deaths", 
                         plot_height=HEIGHT, plot_width=WIDTH, tools=TOOLS)
 
-            pd.vbar(x='dates', top="World", color=colors[0], line_width=SIZE,
+            pd.vbar(x='dates', top="World", color=colors[0],
                     source=source_daily, legend_label="Worldwide")
-            pd.vbar(x='dates', top="selected", color=colors[1], line_width=SIZE,
+            pd.circle(x='dates', y="selected", color=colors[1],
                     source=source_daily, legend_label="Selected Country")
-            pd.circle(x='dates', y="World", color=colors[0], size=CIRCLE_SIZE,
-                      source=source_daily, legend_label="Worldwide", fill_alpha=0,
-                      line_alpha=0)
-            pd.circle(x='dates', y="selected", color=colors[1], size=CIRCLE_SIZE,
-                      source=source_daily, legend_label="Selected Country", fill_alpha=0,
-                      line_alpha=0)
             pd.legend.location = LEGEND_LOC
             pd.yaxis.axis_label = YAXIS_LABEL
             pd.xaxis.axis_label = XAXIS_LABEL
 
-            pt.vbar(x='dates', top="World", color=colors[0], line_width=SIZE,
-                    source=source_total, legend_label="Worldwide")
-            pt.vbar(x='dates', top="selected", color=colors[1], line_width=SIZE,
-                    source=source_total, legend_label="Selected Country")
-            pt.circle(x='dates', y="World", color=colors[0], size=CIRCLE_SIZE,
-                      source=source_total, legend_label="Worldwide", fill_alpha=0, 
-                      line_alpha=0)
-            pt.circle(x='dates', y="selected", color=colors[1], size=CIRCLE_SIZE,
-                      source=source_total, legend_label="Selected Country", fill_alpha=0,
-                      line_alpha=0)
+            pt.vbar(x='dates', color=colors[0], top="World",
+                    source=source_total,
+                    width=0.9, legend_label="Worldwide")
+            pt.vbar(x='dates', color=colors[1], top="selected",
+                    source=source_total, width=0.9,
+                    legend_label="Selected Country")
             pt.legend.location = LEGEND_LOC
             pt.yaxis.axis_label = YAXIS_LABEL
             pt.xaxis.axis_label = XAXIS_LABEL
@@ -238,7 +222,6 @@ class CovidData():
 
             # dates can't be sorted like this, so it has to be removed for this step
             df_dict_total.pop("dates")
-            df_dict_total.pop("dates_str")
             sort_options = sorted(df_dict_total.items(), key=lambda x: x[1][-1],
                                   reverse=True)
             options = []
@@ -247,7 +230,6 @@ class CovidData():
             options.remove("selected")
 
             df_dict_total["dates"] = dates
-            df_dict_total["dates_str"] = dates_str
 
             select = Select(title="Select a country", value=name,
                             options=options)
