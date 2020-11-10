@@ -2,6 +2,7 @@ from bokeh.io import output_file, show, save                 # type: ignore
 from bokeh.layouts import row, column                        # type: ignore
 from bokeh.models import ColumnDataSource, CustomJS, Select  # type: ignore
 from bokeh.models import HoverTool, NumeralTickFormatter     # type: ignore
+from bokeh.models import FactorRange
 from bokeh.plotting import figure                            # type: ignore
 from bokeh.util.browser import view                          # type: ignore
 from datetime import datetime                                # type: ignore
@@ -12,13 +13,21 @@ import matplotlib.pyplot as plt                              # type: ignore
 import pandas as pd                                          # type: ignore
 import requests
 
-usage_msg = ("""Usage: covid_viewer <country> <bokeh/mpl> <input_csv> <output_file> [--update] [--help]
+
+usage_msg = ("""Usage: 
+    covid_viewer <country> <bokeh/mpl> <input_csv> <output_file> 
+                 [--update] [--help]
     --update\t\tupdate the local COVID data copy from JHU
     --help\t\tdisplay this help message
 
 Copyright (c) 2020 by Corinna Buerger""")
 
 JHU_RESPONSE_MIN_LENGTH = 100000
+
+def df_show(df):
+    with pd.option_context('display.max_rows', None, 
+                           'display.max_columns', None):
+        display(df)
 
 
 class CovidData():
@@ -72,6 +81,7 @@ class CovidData():
         # created dict can now be transformed into a DataFrame
         return pd.DataFrame(self.daily_cases)
 
+
     def get_world_cases(self):
         # append to DataFrame for total cases
         world_total = {}
@@ -120,6 +130,7 @@ class CovidData():
 
         self.df_daily = self.df_daily.append(world_daily, ignore_index=True)
 
+
     def select_country(self, name="US"):
         s_daily = self.df_daily[self.df_daily["Country/Region"]
                                 == name].iloc[:, 4:]
@@ -141,6 +152,7 @@ class CovidData():
             print("changing just the first column's name to {}".format(name))
         s_daily = s_daily.rename(columns={col_names[0]: name})
         self.selected = s_daily
+
 
     def create_plot(self, name, dic, title, css_class):
         dic["selected"] = dic[name]
@@ -166,14 +178,15 @@ class CovidData():
         TOOLS = [HoverTool(tooltips=TOOLTIPS), "pan", 
                  "wheel_zoom", "box_zoom", "reset"]
 
-
         # create plot
         p = figure(x_axis_type="datetime", title=TITLE, 
                    plot_height=HEIGHT, tools=TOOLS, width=WIDTH,
                    css_classes=CSS_CLASS)
 
-        p.vbar(x='dates', top="selected", color=COLOR, line_width=SIZE, source=SOURCE)
-        p.circle(x='dates', y="selected", color=COLOR, size=CIRCLE_SIZE, source=SOURCE, 
+        p.vbar(x='dates', top="selected", color=COLOR, 
+               line_width=SIZE, source=SOURCE)
+        p.circle(x='dates', y="selected", color=COLOR, 
+                 size=CIRCLE_SIZE, source=SOURCE, 
                  fill_alpha=0, line_alpha=0)
         p.yaxis.axis_label = YAXIS_LABEL
         p.xaxis.axis_label = XAXIS_LABEL
@@ -181,15 +194,17 @@ class CovidData():
 
         return p, SOURCE
 
+
     def create_dropdown(self, name, source_daily, source_total):
 
         # get options for dropdown
 
-        # dates can't be sorted like this, so it has to be removed for this step
+        # dates can't be sorted like this, so it has to be removed
         self.df_dict_total.pop("dates")
         self.df_dict_total.pop("dates_str")
-        sort_options = sorted(self.df_dict_total.items(), key=lambda x: x[1][-1],
-                              reverse=True)
+        key = lambda x: x[1][-1]
+        sort_options = sorted(self.df_dict_total.items(), 
+                              key=key, reverse=True)
         options = []
         for tpl in sort_options:
             total_cases_list = list(str(tpl[1][-1]))
@@ -213,7 +228,7 @@ class CovidData():
 
         options.remove(f"selected: {selected_total_cases_sep} total cases")
 
-        # dates need to be added again since they were removed for sorting the options
+        # add dates again since they were removed for sorting the options
         self.df_dict_total["dates"] = self.dates
         self.df_dict_total["dates_str"] = self.dates_str
 
@@ -224,19 +239,95 @@ class CovidData():
                         options=options, sizing_mode="scale_width")
 
         with open("main.js", "r") as f:
-            JS_function = CustomJS(args=dict(source_d=source_daily, source_t=source_total, 
+            JS_function = CustomJS(args=dict(source_d=source_daily, 
+                                             source_t=source_total, 
                                              df_dict_t=self.df_dict_total, 
-                                             df_dict_d=self.df_dict_daily), code=f.read())
+                                             df_dict_d=self.df_dict_daily), 
+                                   code=f.read())
             select.js_on_change("value", JS_function)
 
         return select
 
+    # TODO: this function needs major cleanup (comments, better var names, etc.)
+    def plot_daily_most_affected(self):
+
+        # settings for figure
+        if self.DEATHS:
+            yaxis = "Deaths"
+            color = "blue"
+        else:
+            yaxis = "Infections"
+            color = "red"
+        title = "Most affected countries per day"
+        css_class = ["manip-most-affected"]
+        xaxis_label = "Date"
+        yaxis_label = yaxis
+        height = 600
+        width = 760
+        size = 1
+        circle_size = 12
+        tooltips = [("Date", "@x"), 
+                    (f"{yaxis}", "@tops")]
+        tools = [HoverTool(tooltips=tooltips), "pan", 
+                 "wheel_zoom", "box_zoom", "reset"]
+
+        # sums up the cases per country
+        # (some countries are seperated per region)
+        df_daily_grouped = self.df_daily.groupby("Country/Region", 
+                                                 sort=True).sum()
+        # dates start in the 5th column
+        dates = self.df_daily.columns[4:]
+        x_range = []
+        tops    = []
+
+        # get daily five most affected
+        for date in dates:
+            df_daily_sorted = df_daily_grouped.sort_values(by=date, 
+                                                           ascending=False)
+            most_affected  = df_daily_sorted.head(6)
+
+            # list of top five countries
+            countries = list(most_affected.index)
+
+            # worldwide data, which is always top 1, needs to be sliced out
+            # needs to have this format in order to create nested x axis
+            x_range  += [(date, country) for country in countries][1:]
+
+            # list of five most daily cases corresponding to top five countries
+            tops     += most_affected[date].tolist()[1:]
+
+        # needs to have this format in order to create nested x axis
+        tops = tuple(tops)
+
+        source = ColumnDataSource(data={"x": x_range, "tops": tops})
+
+        # print("x_range: {}".format(x_range))
+        # print("tops: {}".format(tops))
+
+        # create figure with the settings and data from above
+        p = figure(x_range=FactorRange(*x_range), title=title, tools=tools,
+                   plot_height=height, width=width, css_classes=css_class)
+        p.xaxis.axis_label = xaxis_label
+        p.xaxis.major_label_orientation = "vertical"
+        p.yaxis.axis_label = yaxis_label
+        p.vbar(x="x", top="tops", color=color, line_width=size, source=source)
+        p.yaxis.formatter=NumeralTickFormatter(format="0a")
+
+        # add hoverable, invisible circles on top of the bars 
+        # since bars can't be hovered
+        p.circle(x="x", y="tops", color=color, size=circle_size, source=source, 
+                 fill_alpha=0, line_alpha=0)
+
+        return p
+
 
     def plot_with_bokeh(self, name, output):
+        p_most = self.plot_daily_most_affected()
         pd, source_d = self.create_plot(name, self.df_dict_daily, 
                                         "Daily", "we-need-this-for-manip")
         pt, source_t = self.create_plot(name, self.df_dict_total, 
                                         "Total", "we-need-this-for-manip-total")
+
 
         select = self.create_dropdown(name, source_d, source_t)
 
@@ -244,9 +335,9 @@ class CovidData():
             template = f.read()
 
         output_file(output)
-        plots = column(pd, pt)
+        plots = column(pd, pt, p_most)
         save(column(select, plots), template=template)
-        view(output)
+
 
     def plot_with_mpl(self, name):
         if self.DEATHS:
@@ -274,6 +365,7 @@ class CovidData():
                    ("Worldwide", "{}".format(name)))
         plt.show()
 
+
     def fill_dict_for_source(self, df, dic, name):
         if self.selected is None:
             raise ValueError("no country selected")
@@ -299,10 +391,12 @@ class CovidData():
         for date_str in self.selected.index:
             date_obj = datetime.strptime(date_str, '%m/%d/%y')
             self.dates.append(date_obj)
-            date_str_new = datetime.strptime(date_str, '%m/%d/%y').strftime('%d %b %Y')
+            date_str_new = datetime.strptime(
+                                    date_str, '%m/%d/%y').strftime('%d %b %Y')
             self.dates_str.append(date_str_new)
         dic["dates"] = self.dates
         dic["dates_str"] = self.dates_str
+
 
     def plot_selected_country(self, name, output, module):
         self.fill_dict_for_source(self.df_daily, self.df_dict_daily, name) 
@@ -313,6 +407,7 @@ class CovidData():
 
         if module == "mpl":
             self.plot_with_mpl(name)
+
 
     @staticmethod
     def update_local_data(source, input_csv):
@@ -334,6 +429,7 @@ class CovidData():
             csv_file.write(content)
             csv_file.close()
             print("successfully updated {}".format(input_csv))
+
 
     @staticmethod
     def usage():
@@ -368,5 +464,5 @@ if __name__ == "__main__":
             CovidData.usage()
 
     covid_data = CovidData(input_csv)
-    covid_data.select_country(name=country)
-    covid_data.plot_selected_country(name=country, output=output, module=module)
+    covid_data.select_country(country)
+    covid_data.plot_selected_country(country, output, module)
